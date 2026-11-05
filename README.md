@@ -1,41 +1,35 @@
-# Forge Agent Runtime
+# Forge Agent
 
-A self-hosted chat agent with persistent memory and internet access. Python standard library only, no pip installs, no API keys, no paid services. The reasoning comes from an open-source model you run yourself (Llama 3, Qwen, Mistral, DeepSeek-R1) through Ollama or any OpenAI-compatible local server.
+A persistent chat agent with memory and internet tools, in two versions that share the same design.
 
-This replaces the earlier placeholder files (agent-core.js, agent-store.js, agent-inject.js), which were not functional.
+## Browser version (iPhone-friendly, no server)
 
-## Run it (PC, Mac, Linux box, or Raspberry Pi)
+A static page in `docs/` served by GitHub Pages. The model runs inside Safari on your phone's GPU (WebGPU, via WebLLM). Memory is stored on the device in IndexedDB. No API key, no host, no computer.
 
-1. Install Python 3.9+ and Ollama (https://ollama.com), then: `ollama pull llama3.1:8b`
-2. `./run.sh` (Windows: `run.bat`). Open http://127.0.0.1:8787
-3. Type `/help`.
+1. Repo Settings > Pages > Source: Deploy from a branch > Branch `main`, folder `/docs` > Save.
+2. Open `https://<your-username>.github.io/forge-agent/` in Safari.
+3. Tap Load model (first load downloads several hundred MB, once) and chat.
+4. Share > Add to Home Screen.
 
-The supervisor restarts the server if it crashes. Logs go to `data/agent.log`. Memory lives in `data/memory.db` (SQLite) and survives restarts.
+Slash commands work before the model loads: /help, /remember, /pref, /decide, /todo, /done, /forget, /memory, /wiki, /search, /fetch, /proxy, /export, /import.
 
-## Use it from your iPhone
+Limits, stated plainly:
+- iPhone web pages get roughly 1.5 GB of memory, so only small models (about 1B parameters) are realistic. They are far weaker than large models.
+- A static page can only read sites that allow browser access (CORS). /wiki (Wikipedia) works. General web search and arbitrary pages need a CORS proxy you provide with /proxy.
+- Memory lives in this browser. Safari may clear site data; use /export to back up and /import to restore.
+- The model download and chat path has not been tested by the author's build environment (no WebGPU there). The logic and UI are tested with a mock model.
 
-Run it on a computer at home, then either use Tailscale (private, recommended) or your home Wi-Fi:
+Tests: `node --test tests/` (Node 20+).
 
-    FORGE_HOST=0.0.0.0 FORGE_TOKEN=<long random string> ./run.sh
+## Python version (needs a computer or server)
 
-It refuses to listen beyond localhost without a token. Open the page in Safari, tap Token, paste it, then Share > Add to Home Screen. Do not expose this to the public internet without HTTPS in front of it.
+A self-hosted server with SQLite memory, a Python standard library only runtime, and Ollama or any OpenAI-compatible local model. Files: `agent/`, `supervisor.py`, `run.sh`, `run.bat`, `seed/`, `tests/test_agent.py`.
 
-## What it does
+1. Install Python 3.9+ and Ollama, then `ollama pull llama3.1:8b`.
+2. `sh run.sh` (Windows: `run.bat`), then open http://127.0.0.1:8787
 
-- Memory: messages, facts, preferences, decisions and open items in SQLite. Past messages from other sessions are searched and injected on every turn. Slash commands (/remember, /pref, /decide, /todo, /done, /forget, /memory) work even if the model is down.
-- State graph: recall > think > act > think ... > learn > respond. State is checkpointed to SQLite at every node.
-- Tools: web_search (DuckDuckGo HTML, or your own SearXNG via FORGE_SEARXNG), fetch_url, list/read/write files inside `workspace/`, and run_shell (OFF unless FORGE_ALLOW_SHELL=1).
-- Learning: the model can save things with <remember> tags, and you can correct it with /forget.
+It refuses to listen beyond localhost without FORGE_TOKEN. Shell access is off unless FORGE_ALLOW_SHELL=1. Settings: FORGE_LLM=ollama|openai|mock, FORGE_MODEL, OLLAMA_HOST, FORGE_LLM_BASE, FORGE_HOST, FORGE_PORT, FORGE_TOKEN, FORGE_SEARXNG, FORGE_ALLOW_LOCAL, FORGE_WORKSPACE. Tests: `python3 tests/test_agent.py`.
 
-## Settings (environment variables)
+The earlier agent-core.js, agent-store.js and agent-inject.js files were non-functional placeholders and are superseded by the above.
 
-FORGE_LLM=ollama|openai|mock, FORGE_MODEL, OLLAMA_HOST, FORGE_LLM_BASE, FORGE_HOST, FORGE_PORT, FORGE_TOKEN, FORGE_SEARXNG, FORGE_ALLOW_SHELL, FORGE_ALLOW_LOCAL, FORGE_WORKSPACE.
-
-## Honest limits
-
-- Intelligence equals the model you run. An 8B model on a laptop is far weaker than a hosted frontier model.
-- It does not retrain model weights. "Learning" means saved memory and retrieval.
-- Web search scrapes DuckDuckGo's HTML page and can be rate-limited or change. SearXNG is more reliable.
-- Not yet tested against a live model or the live internet (the build environment had neither). Tests use a mock model.
-
-Tests: `python3 tests/test_agent.py`. Injecting into Engine Forge later: call POST /api/chat from its page, or add a small fetch hook. Nothing here touches the Engine Forge code.
+Nothing here touches the Engine Forge code.
