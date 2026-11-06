@@ -15,6 +15,8 @@ const HELP = `Commands (work without the model):
 /proxy [prefix|off]     set or show a CORS proxy prefix
 /export                 print a backup of facts and items
 /import {json}          restore from a backup
+/skills                 list installed skill tools
+/tool name {json}       run an installed skill tool directly
 /help                   this list`;
 
 export class Agent {
@@ -84,7 +86,7 @@ ${recalled}${final ? "\nNo more tools. Answer now." : ""}`;
     const cmd = await this.command(text);
     if (cmd !== null) { this.mem.addMessage(session, "assistant", cmd); return { answer: cmd, trace: ["command"] }; }
     if (!this.llm) {
-      const a = "The model is not loaded yet. Tap Load model, or use slash commands (/help).";
+      const a = "The agent model is not loaded. Normal messages go to the model you built (Models page); slash commands (/help) work without one.";
       return { answer: a, trace: ["no-model"] };
     }
     const trace = ["recall"];
