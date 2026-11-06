@@ -1,9 +1,13 @@
 // Shell: page navigation and the chat composer (attachments are held until Send).
 import { $, setStatus, readTextFiles } from './page-utils.js';
-export const PAGES = ['chat', 'models', 'trainer', 'skills', 'rules', 'tutorial'];
+import { decorateNav, iconButton, icon } from './icons.js';
+export const PAGES = ['chat', 'forge', 'train', 'skills', 'tutorial'];
+// Older links and bookmarks used separate Models / Trainer / Rules pages; they are one Train page now.
+const LEGACY = { models: 'train', trainer: 'train', rules: 'train' };
 const input = $('t'), form = $('f');
 let attachments = [], reading = false;
 export function showPage(page) {
+  page = LEGACY[page] || page;
   if (!PAGES.includes(page)) page = 'chat';
   for (const section of document.querySelectorAll('main>section')) section.hidden = section.dataset.screen !== page;
   for (const b of document.querySelectorAll('[data-page]')) { if (b.dataset.page === page) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); }
@@ -11,10 +15,15 @@ export function showPage(page) {
   window.scrollTo(0, 0);
   document.dispatchEvent(new CustomEvent('forge:page', { detail: { page } }));
 }
+decorateNav();
 for (const b of document.querySelectorAll('[data-page]')) b.onclick = () => showPage(b.dataset.page);
+// Composer buttons get their icons; the send button only appears once there is something to send.
+$('upload').replaceChildren(icon('upload'), Object.assign(document.createElement('span'), { textContent: 'Upload' })); $('upload').className = 'ib';
+$('send').replaceChildren(icon('send'), Object.assign(document.createElement('span'), { textContent: 'Send' })); $('send').className = 'ib primary';
+$('chatTools').append(iconButton('memory', 'Memory', { id: 'mem', class: 'quiet', title: 'Show what the agent remembers' }), iconButton('help', 'Help', { id: 'help', class: 'quiet', title: 'Show chat commands' }), iconButton('train', 'Train your model', { class: 'quiet', onclick: () => showPage('train') }));
 window.addEventListener('hashchange', () => showPage(location.hash.slice(1)));
 function refresh() {
-  input.placeholder = attachments.length ? '' : 'Begin chat';
+  input.placeholder = attachments.length ? '' : 'Ask your model, or paste text to teach it';
   form.classList.toggle('has-content', Boolean(input.value.trim() || attachments.length));
   const list = $('attachmentList'); list.replaceChildren();
   attachments.forEach((a, i) => {

@@ -9,10 +9,10 @@ PROMPT = 'Work out the displacement of a 4 cylinder, 86 mm bore, 86 mm stroke en
 out = {'ranAt': time.strftime('%Y-%m-%dT%H:%M:%S'), 'browser': 'Chromium headless (Playwright)'}
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True, args=['--no-sandbox']); page = browser.new_page(viewport={'width': 390, 'height': 844})
-    page.goto(BASE + '#models'); page.wait_for_selector('#mbCreate')
+    page.goto(BASE + '#train'); page.wait_for_selector('#mbCreate')
     page.fill('#mbId', 'tool-learner'); page.select_option('#mbH', '64'); page.fill('#mbSeed', '3'); page.click('#mbCreate')
     page.wait_for_function("document.querySelector('#mbStatus').textContent.includes('Created and saved tool-learner')")
-    page.click('nav button[data-page=skills]'); page.wait_for_selector('#skFile')
+    page.click('nav button[data-page=skills]'); page.wait_for_selector('#skFile', state='attached')
     page.set_input_files('#skFile', {'name': 'engine-displacement.md', 'mimeType': 'text/markdown', 'buffer': SKILL.encode()})
     page.wait_for_selector('#skApprove'); page.check('#skApprove'); page.click('#skPreview button:has-text("Install skill")')
     page.wait_for_function("document.querySelector('#skStatus').textContent.includes('Installed engine-displacement')", timeout=30000)

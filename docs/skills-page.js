@@ -4,11 +4,12 @@ import { skillRegistry, runSkillTests } from './skill-registry.js';
 import { parseSkill, codeHash, validateInput } from './skill-format.js';
 import { modelService } from './model-service.js';
 import { $, el, fmt, setStatus, readTextFiles } from './page-utils.js';
+import { icon, iconButton } from './icons.js';
 const host = $('skillsPage');
 host.append(
   el('p', { text: 'A skill is one Markdown file: instructions for you, a forge-tool JavaScript block that defines run(input), a forge-schema for its input, forge-tests that must pass, and optional forge-example pairs. Installed tools run in an isolated sandbox with no network, storage or page access. Your model gains the tool by learning to emit a call such as [tool:name] {"field": 1}; the application runs the tool and shows the result.' }),
   el('p', { id: 'skSandbox', role: 'status', class: 'modelLine' }),
-  el('div', { class: 'card' }, el('h2', { text: 'Add a skill' }), el('div', { class: 'row' }, el('input', { id: 'skFile', type: 'file', accept: '.md' }), el('button', { id: 'skTemplate', type: 'button', text: 'Download a template skill' })), el('div', { id: 'skPreview' }), el('p', { id: 'skStatus', role: 'status', hidden: true })),
+  el('div', { class: 'card' }, el('h2', {}, icon('skills', 20), 'Add a skill'), el('div', { class: 'row' }, iconButton('upload', 'Upload a skill (.md)', { class: 'primary', onclick: () => $('skFile').click() }), el('input', { id: 'skFile', type: 'file', accept: '.md', hidden: true }), iconButton('download', 'Download a template skill', { id: 'skTemplate' })), el('div', { id: 'skPreview' }), el('p', { id: 'skStatus', role: 'status', hidden: true })),
   el('div', { class: 'card' }, el('h2', { text: 'Installed skills' }), el('div', { id: 'skList', class: 'list' }), el('p', { id: 'skListStatus', role: 'status', hidden: true })));
 const status = (t, tone) => setStatus($('skStatus'), t, tone);
 let pending = null, busy = false;
@@ -28,8 +29,8 @@ function preview(parsed, file) {
     box.append(el('p', { text: `Tool ${parsed.tool.name} — input fields: ${Object.entries(parsed.tool.schema).map(([k, d]) => `${k} (${d.type}${d.min !== undefined ? ` ≥${d.min}` : ''}${d.max !== undefined ? ` ≤${d.max}` : ''}${d.required === false ? ', optional' : ''})`).join(', ') || 'none'}` }));
     box.append(el('p', { dataset: { tone: 'caution' }, text: 'Read the code before approving. It runs only in the sandbox, but it will run with whatever input your model or you supply.' }), el('pre', { class: 'codeBox', text: parsed.tool.code }));
     const approve = el('label', {}, el('input', { id: 'skApprove', type: 'checkbox' }), 'I have read this code and approve installing it');
-    box.append(approve, el('div', { class: 'actions' }, el('button', { type: 'button', text: 'Run tests in sandbox', onclick: () => act(async () => { status('Running tests…', 'caution'); const r = await runSkillTests(parsed); status(`${r.passed}/${r.total} tests passed.\n` + reportText(r), r.ok ? 'ok' : 'error'); }) }), el('button', { type: 'button', text: 'Install skill', onclick: () => act(install) })));
-  } else box.append(el('div', { class: 'actions' }, el('button', { type: 'button', text: 'Install skill', onclick: () => act(install) })));
+    box.append(approve, el('div', { class: 'actions' }, iconButton('run', 'Run tests in sandbox', { onclick: () => act(async () => { status('Running tests…', 'caution'); const r = await runSkillTests(parsed); status(`${r.passed}/${r.total} tests passed.\n` + reportText(r), r.ok ? 'ok' : 'error'); }) }), iconButton('check', 'Install skill', { class: 'primary', onclick: () => act(install) })));
+  } else box.append(el('div', { class: 'actions' }, iconButton('check', 'Install skill', { class: 'primary', onclick: () => act(install) })));
   if (parsed.instructions) box.append(el('details', {}, el('summary', { text: 'Instructions text' }), el('pre', { text: parsed.instructions })));
 }
 async function install() {
@@ -49,7 +50,7 @@ $('skFile').onchange = async e => {
 $('skTemplate').onclick = () => {
   const url = URL.createObjectURL(new Blob([TEMPLATE], { type: 'text/markdown' })), a = document.createElement('a'); a.href = url; a.download = 'engine-displacement.md'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 10000);
 };
-// Allow other pages (Trainer/Chat uploads) to hand a skill file here for review.
+// Allow other pages (Train/Chat uploads) to hand a skill file here for review.
 modelService.addEventListener('skill-files', ({ detail }) => { const file = detail.files[0]; try { preview(parseSkill(file.text, { filename: file.name }), file); status(`${file.name} from your upload is ready for review here (Skills page).`, 'caution'); } catch (x) { status(`${file.name}: ${x.message}`, 'error'); } });
 function runForm(record) {
   const fields = Object.entries(record.tool.schema), inputs = {};
@@ -60,7 +61,7 @@ function runForm(record) {
     result.textContent = out.ok ? (out.rendered ? out.rendered + '\n' : '') + JSON.stringify(out.result, null, 2) + `\n(${out.mode}, ${out.milliseconds.toFixed(0)} ms; model call text: ${out.call})` : 'Error: ' + out.error; result.dataset.tone = out.ok ? 'ok' : 'error';
   }); } });
   for (const [k, d] of fields) { inputs[k] = el('input', { type: d.type === 'string' ? 'text' : d.type === 'boolean' ? 'text' : 'number', step: d.type === 'integer' ? '1' : 'any', placeholder: d.type + (d.required === false ? ' (optional)' : ''), 'aria-label': k }); form.append(el('label', {}, k + ' ', inputs[k])); }
-  form.append(el('button', { type: 'submit', text: 'Run tool' }));
+  form.append(iconButton('run', 'Run tool', { type: 'submit' }));
   const result = el('pre', { 'aria-live': 'polite' });
   return el('details', {}, el('summary', { text: 'Run this tool manually' }), form, result);
 }
@@ -75,14 +76,14 @@ function renderList() {
       r.description && el('p', { text: r.description }),
       el('p', { class: 'muted', text: `installed ${new Date(r.installedAt).toLocaleString()}` + (r.testReport ? ` · tests ${r.testReport.passed}/${r.testReport.total} passed (${r.testReport.mode})` : '') + ` · ${r.examples} example pair(s) · ${r.toolExamples} tool-call pair(s)` + (r.tool ? ` · code sha256 ${r.tool.codeHash.slice(0, 12)}` : '') }),
       el('div', { class: 'actions' },
-        el('button', { type: 'button', text: enabled ? 'Disable' : 'Enable', onclick: () => act(() => skillRegistry.setEnabled(r.name, !enabled)) }),
-        (r.examples + r.toolExamples) > 0 && el('button', { type: 'button', text: 'Queue training examples for the active model', onclick: () => act(async () => {
+        iconButton(enabled ? 'pause' : 'resume', enabled ? 'Disable' : 'Enable', { onclick: () => act(() => skillRegistry.setEnabled(r.name, !enabled)) }),
+        (r.examples + r.toolExamples) > 0 && iconButton('teach', 'Queue training examples for the active model', { onclick: () => act(async () => {
           const examples = skillRegistry.trainingExamples(r.name); let queued = 0;
           for (let i = 0; i < examples.length; i += 25) { await modelService.enqueue(examples.slice(i, i + 25)); queued += Math.min(25, examples.length - i); }
-          status(`Queued ${queued} example(s) from ${r.name} for model ${modelService.activeId}. Queued is not learned: watch for green receipts in Trainer, then test the prompts in Chat.`, 'ok');
+          status(`Queued ${queued} example(s) from ${r.name} for model ${modelService.activeId}. Queued is not learned: watch for green receipts on the Train page, then test the prompts in Chat.`, 'ok');
         }) }),
-        el('button', { type: 'button', text: 'Show source', onclick: () => { const pre = el('pre', { class: 'codeBox', text: r.source }); list.querySelector(`[data-src="${r.name}"]`)?.remove(); pre.dataset.src = r.name; list.append(pre); } }),
-        el('button', { type: 'button', class: 'danger', text: 'Remove', onclick: () => act(async () => { if (!confirm(`Remove skill ${r.name}? The model keeps anything it already learned about it.`)) return; await skillRegistry.remove(r.name); status(`Removed ${r.name}.`, 'ok'); }) })),
+        iconButton('folder', 'Show source', { onclick: () => { const pre = el('pre', { class: 'codeBox', text: r.source }); list.querySelector(`[data-src="${r.name}"]`)?.remove(); pre.dataset.src = r.name; list.append(pre); } }),
+        iconButton('trash', 'Remove', { class: 'danger', onclick: () => act(async () => { if (!confirm(`Remove skill ${r.name}? The model keeps anything it already learned about it.`)) return; await skillRegistry.remove(r.name); status(`Removed ${r.name}.`, 'ok'); }) })),
       r.tool && enabled && runForm(r)));
   }
 }

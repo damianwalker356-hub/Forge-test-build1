@@ -1,11 +1,11 @@
 {
-  "ranAt": "2026-11-06T06:57:34",
+  "ranAt": "2026-11-06T21:23:42",
   "browser": "Chromium headless (Playwright)",
   "trainingSeconds": 26.1,
   "updates": 916,
   "jobs": [
     {
-      "id": "eaec18f0-6936-42d1-887f-0978b20d07ea",
+      "id": "59d9d4cb-8de3-4066-8920-df9fd6ca6e60",
       "name": "engine-displacement example",
       "kind": "pair",
       "status": "trained",
@@ -15,7 +15,7 @@
       "bytes": 159
     },
     {
-      "id": "be08a740-6857-4017-88a9-e290b41da50f",
+      "id": "24cf89bb-409c-4833-84a3-fffa8c8e82a4",
       "name": "engine-displacement tool call",
       "kind": "pair",
       "status": "trained",
@@ -25,7 +25,7 @@
       "bytes": 155
     },
     {
-      "id": "a278d5a6-d440-4f36-866e-d91a17d7d4e3",
+      "id": "7e612367-d175-4f83-912d-8b72616f3dbf",
       "name": "engine-displacement tool call",
       "kind": "pair",
       "status": "trained",
@@ -64,5 +64,5 @@
   "modelEmittedToolCall": true,
   "toolRanInSandbox": true,
   "argumentsMatchedPrompt": false,
-  "note": "Verified: mechanics of learn \u2192 emit tool call \u2192 sandbox execution. Argument fidelity across similar prompts is a model-quality question and is reported, not guaranteed. In this run the model emitted the arguments of a neighbouring training example (83/85/4) for the 86/86/4 prompt."
+  "note": "Verified: mechanics of learn \u2192 emit tool call \u2192 sandbox execution. Argument fidelity across similar prompts is a model-quality question and is reported, not guaranteed."
 }

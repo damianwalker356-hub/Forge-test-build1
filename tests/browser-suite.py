@@ -1,4 +1,4 @@
-# End-to-end browser checks for the owner-built model, rules, trainer, skills and persistence.
+# End-to-end browser checks for the owner-built model, rules, teaching, skills and persistence (all on the Train page).
 # Run: python3 -m http.server 8765 --bind 127.0.0.1 (from the repository root) then python3 tests/browser-suite.py
 # Requires: pip install playwright && python3 -m playwright install chromium
 import json, sys, time
@@ -15,7 +15,7 @@ with sync_playwright() as p:
     context = browser.new_context(viewport={'width': 390, 'height': 844})
     page = context.new_page(); errors = []
     page.on('pageerror', lambda e: errors.append(str(e)))
-    page.goto(BASE + '#models'); page.wait_for_selector('#mbCreate')
+    page.goto(BASE + '#train'); page.wait_for_selector('#mbCreate')
     # 1. Create a model with a custom hidden size and a fixed seed.
     page.fill('#mbId', 'suite-model'); page.select_option('#mbH', 'custom'); page.fill('#mbCustom', '48'); page.fill('#mbSeed', '7')
     page.click('#mbCreate'); page.wait_for_function("document.querySelector('#mbStatus').textContent.includes('Created and saved suite-model')")
@@ -27,7 +27,7 @@ with sync_playwright() as p:
     page.click('#mbBench'); page.wait_for_function("document.querySelector('#mbStatus').textContent.includes('one weight update')")
     record('Device benchmark reports update and read cost', page.locator('#mbStatus').text_content())
     # 2. Apply owner rules; generation reports the rule context.
-    page.click('nav button[data-page=rules]'); page.wait_for_selector('#ruApply:not([disabled])')
+    page.click('nav button[data-page=train]'); page.wait_for_selector('#ruApply:not([disabled])')
     assert page.input_value('#ruText') == ''
     rules = '# My rules\nAnswer bore in millimetres.\n```forge-test\n[{"name":"unit","prompt":"Bore unit?","expected":"mm"}]\n```\n'
     page.fill('#ruText', rules); page.click('#ruApply'); page.wait_for_function("document.querySelector('#ruStatus').textContent.includes('Applied')")
@@ -37,7 +37,7 @@ with sync_playwright() as p:
     assert gen['rules']['bytes'] == len(rules.encode()) and gen['trainingPerformed'] is False
     record('Generation is conditioned on the applied rules and changes no weights', gen['rules'])
     # 3. Trainer: pause, ask, correct, resume, receipt with changed weights and rules context.
-    page.click('nav button[data-page=trainer]'); page.wait_for_selector('#ctForm')
+    page.click('nav button[data-page=train]'); page.wait_for_selector('#ctForm')
     page.evaluate("() => window.__forge.modelService.call('pause')"); before = audit(page)
     page.fill('#ctText', 'Bore unit?'); page.click('#ctForm button[value=ask]'); page.wait_for_function("document.querySelector('#ctLog').textContent.includes('Model:')")
     a = audit(page); assert len(a['jobs']) == 1 and a['jobs'][0]['kind'] == 'text' and a['steps'] == 0
@@ -56,7 +56,7 @@ with sync_playwright() as p:
     assert pair_receipts and pair_receipts[-1]['rules']['bytes'] == len(rules.encode())
     record('Pair training ran with the owner rules in context', pair_receipts[-1]['rules'])
     # Rule tests use the evaluate path.
-    page.click('nav button[data-page=rules]'); page.wait_for_selector('#ruApply:not([disabled])'); page.evaluate("document.querySelector('#ruTest').closest('details').open = true"); page.click('#ruTest')
+    page.click('nav button[data-page=train]'); page.wait_for_selector('#ruApply:not([disabled])'); page.evaluate("document.querySelector('#ruTest').closest('details').open = true"); page.click('#ruTest')
     page.wait_for_function("/exact at update/.test(document.querySelector('#ruTestOut').textContent)")
     record('Rule tests run against the applied rules', page.locator('#ruTestOut').text_content()[:200])
     # 4. Skills: upload, approve, tests, install, run, tool call from model output.
@@ -104,7 +104,7 @@ with sync_playwright() as p:
     assert skills == [['engine-displacement', 'installed']]
     record('Model, rules, learning history and installed skill persist across reload', {'steps': a['steps'], 'jobs': len(a['jobs']), 'skills': skills})
     # 6. Model list, switch and delete.
-    page.click('nav button[data-page=models]'); page.wait_for_selector('#mbList .item')
+    page.click('nav button[data-page=train]'); page.wait_for_selector('#mbList .item'); page.evaluate("document.querySelector('#mbCreateBox').open = true")
     page.fill('#mbId', 'second'); page.select_option('#mbH', '64'); page.fill('#mbSeed', ''); page.click('#mbCreate'); page.wait_for_function("document.querySelector('#mbStatus').textContent.includes('Created and saved second')")
     page.wait_for_function("document.querySelectorAll('#mbList .item').length === 2")
     assert page.evaluate("localStorage.getItem('forge-active-owned-model')") == 'second'

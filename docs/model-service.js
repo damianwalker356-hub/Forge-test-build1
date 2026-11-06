@@ -49,7 +49,7 @@ class ModelService extends EventTarget {
   async evaluate(cases) { await this.ready; return this.call('evaluate', { cases }); }
   async export() { await this.ready; return this.call('export'); }
   async audit() { await this.ready; return this.call('audit'); }
-  requireModel() { if (!this.state.exists) throw Error('No model is active. Create one on the Models page (or import an exported checkpoint there); nothing is prebuilt.'); }
+  requireModel() { if (!this.state.exists) throw Error('No model is active. Create one on the Train page (or import an exported checkpoint there); nothing is prebuilt.'); }
   // Chat/trainer entry point. Every user text and upload is queued as learning data when auto-learn is on (or learnOnly).
   // Prediction never updates weights; the queued training runs separately and reports receipts.
   async interact(text, { files = [], learnOnly = false, correction = false, length = 120 } = {}) {

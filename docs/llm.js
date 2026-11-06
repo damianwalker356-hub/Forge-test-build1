@@ -1,4 +1,4 @@
-// Model backends. The only language model in this application is the one the owner builds on the Models page
+// Model backends. The only language model in this application is the one the owner builds on the Train page
 // (see learning-worker.js). No third-party model, CDN or service is loaded.
 
 // Deterministic stand-in for tests (?mock=1). Not intelligent.

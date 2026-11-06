@@ -86,7 +86,7 @@ ${recalled}${final ? "\nNo more tools. Answer now." : ""}`;
     const cmd = await this.command(text);
     if (cmd !== null) { this.mem.addMessage(session, "assistant", cmd); return { answer: cmd, trace: ["command"] }; }
     if (!this.llm) {
-      const a = "The agent model is not loaded. Normal messages go to the model you built (Models page); slash commands (/help) work without one.";
+      const a = "The agent model is not loaded. Normal messages go to the model you built (Train page); slash commands (/help) work without one.";
       return { answer: a, trace: ["no-model"] };
     }
     const trace = ["recall"];

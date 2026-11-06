@@ -1,5 +1,5 @@
 {
-  "ranAt": "2026-11-06T06:58:37",
+  "ranAt": "2026-11-06T21:23:00",
   "browser": "Chromium headless (Playwright), viewport 390\u00d7844",
   "results": [
     {
@@ -20,14 +20,14 @@
         "rulesBytes": 0,
         "rulesStateStep": null,
         "lastReceipt": null,
-        "createdAt": "2026-11-06T06:58:33.944Z",
-        "updatedAt": "2026-11-06T06:58:33.944Z"
+        "createdAt": "2026-11-06T21:22:56.441Z",
+        "updatedAt": "2026-11-06T21:22:56.441Z"
       }
     },
     {
       "test": "Device benchmark reports update and read cost",
       "result": "pass",
-      "detail": "Hidden size 48 on this device: one weight update \u2248 10 ms; reading text \u2248 0.03 ms per byte; a typical short chat message \u2248 0.0 s of training. Rules of 2,000 bytes add \u2248 0.1 s each time they are re-read."
+      "detail": "Hidden size 48 on this device: one weight update \u2248 9 ms; reading text \u2248 0.03 ms per byte; a typical short chat message \u2248 0.0 s of training. Rules of 2,000 bytes add \u2248 0.1 s each time they are re-read."
     },
     {
       "test": "Rules written by owner are applied to the active model",
@@ -48,7 +48,7 @@
       "result": "pass",
       "detail": [
         {
-          "id": "eb177a04-9ab1-4c97-9e13-0a0af9019476",
+          "id": "08c2fc43-b8ff-4b6a-94c0-a0648d4a4a8b",
           "name": "User message",
           "kind": "text",
           "status": "queued",
@@ -63,7 +63,7 @@
       "test": "Correction becomes a question/answer pair for the last question",
       "result": "pass",
       "detail": {
-        "id": "9d01fd39-5c4a-4df0-8653-0dacd44016c4",
+        "id": "8b0ad621-7400-48fd-b84f-10c5f67cbfe0",
         "name": "User correction",
         "kind": "pair",
         "status": "queued",
@@ -104,7 +104,7 @@
     {
       "test": "Sandbox isolation probe passed",
       "result": "pass",
-      "detail": "Sandbox check passed in this browser (blob-worker; network, storage, page and importScripts all unreachable; 55 ms)."
+      "detail": "Sandbox check passed in this browser (blob-worker; network, storage, page and importScripts all unreachable; 30 ms)."
     },
     {
       "test": "Install refused without code approval",
@@ -182,7 +182,7 @@
       "test": "Model, rules, learning history and installed skill persist across reload",
       "result": "pass",
       "detail": {
-        "steps": 73,
+        "steps": 38,
         "jobs": 6,
         "skills": [
           [
@@ -195,7 +195,7 @@
     {
       "test": "Multiple models: create, switch active, delete",
       "result": "pass",
-      "detail": "suite-model \u2014 active\n\nhidden 48 \u00b7 27,184 parameters \u00b7 85 updates \u00b7 6 saved examples \u00b7 rules 113 bytes \u00b7 updated 11/6/2026, 6:58:37 AM\n\nExport weights + learning history\nOpen Trainer\nDelete"
+      "detail": "suite-model\nactive\n\nhidden 48 \u00b7 27,184 parameters \u00b7 54 updates \u00b7 6 saved examples \u00b7 rules 113 bytes \u00b7 updated 11/6/2026, 9:22:59 PM\n\nExport\nOpen Chat\nDelete"
     },
     {
       "test": "No uncaught page errors during the suite",

@@ -6,14 +6,17 @@ Open `https://<your-username>.github.io/forge-agent/` (Repo Settings → Pages �
 
 ## Pages
 
+Five labelled icon tabs (bottom bar on phones, top bar on desktop). Every action is a labelled icon button; nothing is a bare text box.
+
 | Page | What it does |
 |---|---|
-| **Chat** | Search-engine style start screen. Messages go to your active model; the line under each answer states which model and update produced it, whether your rules were in context, and that generation changed no weights. With automatic learning on, your messages and attached text files are queued as learning material. `/skills`, `/tool name {json}`, `/help` and the memory slash commands work too. |
-| **Models** | Create a model (ID, hidden size 8–1024, optional seed), measure how long one update takes on this device, list/switch/delete models, export (weights + rules + learning history + receipts) and import a checkpoint under a new ID. Hidden size 800 ≈ 1,050,656 parameters. |
-| **Trainer** | A conversation with the model where every turn can become training data: *Learn from this*, *Send / ask model*, *Correct previous answer*, upload text/Markdown. Each committed weight change prints a green receipt: update range, byte targets, loss before/after, changed parameter count, SHA-256 of the weights before/after, rules context. Evidence and re-tests of trained pairs are one click away. |
+| **Chat** | Start screen with one composer. Messages go to your active model; the line under each answer states which model and update produced it, whether your rules were in context, and that generation changed no weights. With automatic learning on, your messages and attached text files are queued as learning material. *Memory*, *Help* and *Train your model* sit under the composer; `/skills`, `/tool name {json}` and `/help` work too. |
+| **Forge** | Code editor for the Forge language (Python-like syntax, plus the RPN kernel layer): line numbers, auto-indent, examples that have been run through Forge and matched against CPython, open/download/copy, autosave in the browser. Programs run natively with `forge/boot.sh` on Linux x86-64; the page says plainly that in-app execution needs an x86-64 emulator that has not been built. |
+| **Train** | One page that replaced the old Models, Trainer and Rules pages. *Your model*: the model list with Use / Export / Open Chat / Delete, and a create form (name, seed, size cards from Tiny to Extra large or Custom, measure speed on this device, import a checkpoint). *Rules*: write, apply, remove, import/export, rule tests, draft history. *Teach*: a conversation where every turn can become training data — Teach, Ask, Correct previous answer, Upload — with pause/resume and the auto-learn switch; each committed weight change prints a green receipt (update range, byte targets, loss before/after, changed parameter count, SHA-256 before/after, rules context). *Evidence and export* holds the audit, re-tests of trained pairs and the checkpoint export. |
 | **Skills** | Upload Markdown skills that carry real tool code. You read and approve the code, the tests run in a sandbox, then the tool is installed. *Queue training examples* teaches the active model to call the tool. See [SKILLS.md](SKILLS.md). |
-| **Rules** | Write your model's rules (blank until you do). *Apply* stores them with the model; the model reads them before every answer and every question→answer training pass. `forge-test` blocks let you measure rule-following after training. |
-| **Tutorial** | The six steps above, what the model is, and a hands-on six-parameter math model to see a full train/evaluate loop in seconds. |
+| **Tutorial** | Seven numbered steps (build, rules, teach, skills, chat, write Forge programs, keep your work), what the model is, and a hands-on six-parameter math model to see a full train/evaluate loop in seconds. |
+
+Old links to `#models`, `#trainer` and `#rules` open the Train page.
 
 Colours: white = regular/your text; green = model output or a completed operation (not verified truth); red = error/rejected input; yellow = warnings, queued-not-yet-learned, heavy computation.
 
@@ -38,10 +41,14 @@ A skill is a Markdown file with `forge-tool` (JavaScript `run(input)`), `forge-s
 - Verified in Linux Chromium (Playwright) only. iPhone Safari has not been tested by the author; the sandbox falls back from blob workers to data: URL workers for engines that need it, but that fallback is untested on a device.
 - Browser memory and the 2 MiB dataset / 500 examples / 16 KiB rules / 2 KiB prompt limits are enforced without silent truncation.
 
+## The Forge language (`forge/`)
+
+`forge/` is the Forge language: a Linux x86-64 kernel whose whole toolchain was written as hexadecimal machine code (no compiler, assembler, linker or libc anywhere in the chain), an RPN standard library, and a Python-like front end (lexer, compiler, runtime) written in that RPN language. `./forge/boot.sh program.py` runs a Python-syntax program; `./forge/run_tests.sh` rebuilds the chain from the hex sources, verifies every stage byte-for-byte, and runs every test against checked-in CPython output. What it supports, what it deliberately does not, and measured performance are in [forge/README.md](forge/README.md). The Forge page of the app edits these programs; it does not execute them (see the page and the README for why).
+
 ## Tests
 
 - `npm test` — Node unit tests (53): RNN gradient checks, parameter formula, seeds, rules conditioning, pair learning, data windows, skill format parsing/validation, tool-call parsing, memory/agent logic. Results: `validation/node-test-results.txt`.
-- `python3 -m http.server 8765 --bind 127.0.0.1` then `python3 tests/browser-suite.py` — 22 end-to-end checks in headless Chromium at 390×844 (create model, rules, trainer receipts, sandbox isolation, skill install, tool execution, persistence, model switching). Results: `validation/browser-suite-results.json`.
+- `python3 -m http.server 8765 --bind 127.0.0.1` then `python3 tests/browser-suite.py` — 22 end-to-end checks in headless Chromium at 390×844 (create model, rules, teaching receipts, sandbox isolation, skill install, tool execution, persistence, model switching). Results: `validation/browser-suite-results.json`.
 - `python3 tests/browser-tool-learning.py` — slow check that a fresh model learns to emit a tool call and that Chat executes it. Results and caveats: `validation/browser-tool-learning.json`.
 
 ## Optional Python server
