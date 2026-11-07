@@ -19,6 +19,7 @@ variable tp
 : expect-op ( code -- ) op? 0= if s" unexpected token" syntax-error then adv ;
 : expect-type ( type -- ) ct <> if s" unexpected token" syntax-error then adv ;
 : unsupported ( addr len -- ) cline cur-line ! s" SyntaxError: not supported in Forge 2: " err-type rt-fatal ;
+: limit-error ( addr len -- ) cline cur-line ! s" SyntaxError: compiler limit exceeded: " err-type rt-fatal ;
 
 \ ------------------------------------------------------------------ code emission
 : w!     ( n a -- ) over 255 and over c! over 8 rshift 255 and over 1+ c! over 16 rshift 255 and over 2 + c! swap 24 rshift 255 and swap 3 + c! ;
@@ -43,7 +44,7 @@ variable in-func  0 in-func !      \ 0 at top level, 1 inside a def
 variable nloc                        \ number of local slots in the current def
 variable nhidden 0 nhidden !         \ hidden temporaries allocated at top level (global cells)
 256 array touched variable ntouched 0 ntouched !
-: touch ( sym -- ) ntouched @ cells touched + ! 1 ntouched +! ;
+: touch ( sym -- ) ntouched @ 256 >= if s" more than 256 distinct names in one function" limit-error then ntouched @ cells touched + ! 1 ntouched +! ;
 : add-local ( sym -- ) dup sym.slot @ 0<> if drop exit then nloc @ 1+ over sym.slot ! touch 1 nloc +! ;
 : force-global ( sym -- ) -1 over sym.slot ! touch ;
 : clear-locals ( -- ) ntouched @ 0 begin 2dup > while dup cells touched + @ 0 swap sym.slot ! 1+ repeat 2drop 0 ntouched ! 0 nloc ! ;
@@ -63,10 +64,10 @@ variable nhidden 0 nhidden !         \ hidden temporaries allocated at top level
 \ ------------------------------------------------------------------ loops (break / continue bookkeeping)
 32 array loop-cont  32 array loop-brk0  variable loop-sp 0 loop-sp !
 1024 array brk-pats  variable nbrk 0 nbrk !
-: loop-begin ( cont-target -- ) loop-sp @ cells loop-cont + ! nbrk @ loop-sp @ cells loop-brk0 + ! 1 loop-sp +! ;
+: loop-begin ( cont-target -- ) loop-sp @ 32 >= if s" loops nested more than 32 deep" limit-error then loop-sp @ cells loop-cont + ! nbrk @ loop-sp @ cells loop-brk0 + ! 1 loop-sp +! ;
 : loop-end ( -- ) -1 loop-sp +! loop-sp @ cells loop-brk0 + @ ( first )
    begin dup nbrk @ < while dup cells brk-pats + @ patch! 1+ repeat drop loop-sp @ cells loop-brk0 + @ nbrk ! ;
-: add-break ( patch -- ) nbrk @ cells brk-pats + ! 1 nbrk +! ;
+: add-break ( patch -- ) nbrk @ 1024 >= if s" more than 1024 pending break statements" limit-error then nbrk @ cells brk-pats + ! 1 nbrk +! ;
 : in-loop? ( -- f ) loop-sp @ 0 > ;
 
 \ ------------------------------------------------------------------ forward references
@@ -220,7 +221,7 @@ variable 'factor
 \ comprehension and literals
 8 array for-targets variable nfor
 : parse-targets ( -- )  \ NAME [, NAME]* -> for-targets / nfor  (cursor stops at 'in')
-   0 nfor ! begin name? 0= if s" expected loop variable" syntax-error then cv nfor @ cells for-targets + ! 1 nfor +! adv
+   0 nfor ! begin name? 0= if s" expected loop variable" syntax-error then nfor @ 8 >= if s" more than 8 loop variables" limit-error then cv nfor @ cells for-targets + ! 1 nfor +! adv
       [char] , op? while adv repeat ;
 : store-targets ( -- )  \ value on runtime stack -> targets
    nfor @ 1 = if for-targets @ store-sym, exit then
