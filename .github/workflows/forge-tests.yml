@@ -1,0 +1,25 @@
+name: forge-tests
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run the Forge test suite
+        working-directory: forge
+        run: |
+          chmod +x forge hex0 hex1 boot.sh run_tests.sh
+          ./run_tests.sh
+
+      - name: Report the exit status of bye
+        if: always()
+        working-directory: forge
+        run: |
+          rc=0
+          ./forge core.fg test_core.fg > /dev/null 2>&1 || rc=$?
+          echo "exit status of test_core.fg (ends with bye): $rc"
