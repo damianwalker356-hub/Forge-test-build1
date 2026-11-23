@@ -1,0 +1,103 @@
+name: Forge guarded cleanup
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: forge-cleanup-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply source-checked fixes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def apply(name, pairs):
+              p=Path('docs')/name
+              s=p.read_text()
+              for a,b in pairs:
+                  if s.count(a)!=1:
+                      raise SystemExit('STOP: source differs or patch already applied: '+str(p)+' anchor '+repr(a[:90]))
+                  s=s.replace(a,b,1)
+              p.write_text(s)
+
+          apply('learning-worker.js',[
+          ('const rules = await rulesState({ force: true }), dec = new TextDecoder(), requeued = [], kept = [];',
+           'const rules = await rulesState({ force: true }), dec = new TextDecoder(), requeued = [], kept = [], skipped = [], failed = [];\n  let tested = 0;'),
+          ('if (job.responseStart > 2048 || job.tokens.length - job.responseStart > 512) continue;',
+           "if (job.responseStart > 2048 || job.tokens.length - job.responseStart > 512) { skipped.push({id:job.id, name:job.name, reason:'Over automatic check limits'}); job.latestEvaluation = {outcome:'not-tested', step:net.steps, rulesHash:rules.hash}; continue; }\n    tested++;"),
+          ('if (actual === expected) { kept.push(job.name); continue; }',
+           "job.latestEvaluation = {outcome:actual === expected ? 'reproduced' : 'not-reproduced', step:net.steps, rulesHash:rules.hash, at:new Date().toISOString()};\n    if (actual === expected) { kept.push(job.name); continue; }\n    failed.push({id:job.id, name:job.name});"),
+          ('tested: pairs.length, reproduced: kept.length, requeued,',
+           'eligible: pairs.length, tested, skipped, failed, reproduced: kept.length, requeued,'),
+          ('const receipt = { reproduction, id: crypto.randomUUID(),',
+           "if (job.status === 'trained' && !job.stopReason) job.stopReason = 'Pass budget exhausted; reproduction is not implied';\n    const receipt = { reproduction, workState:job.status === 'trained' ? 'finished' : 'queued', id: crypto.randomUUID(),"),
+          ('updates: j.updates, bytes: j.tokens.length })), receipts: record.receipts',
+           "updates: j.updates, bytes: j.tokens.length, workState:j.status === 'trained' ? 'finished' : 'queued', stopReason:j.stopReason || null, latestEvaluation:j.latestEvaluation || null })), receipts: record.receipts")])
+          apply('app.js',[
+          ('`${c.reproduced}/${c.tested} trained pairs reproduced at update ${c.step}`',
+           '`${c.reproduced}/${c.tested} tested pairs reproduced at update ${c.step}` + (c.skipped?.length ? `; ${c.skipped.length} skipped (over check limits)` : \'\')'),
+          ('const call = parseToolCall(out.text); if (call) await runToolCall(call);',
+           "let call = parseToolCall(out.text);\n    if (!call) {\n      const legacy = /^TOOL:\\s*([a-z0-9][a-z0-9_-]*)\\s*(\\{[^]*\\})\\s*$/i.exec(out.text.trim());\n      if (legacy) { try { call = {name:legacy[1], input:JSON.parse(legacy[2])}; } catch { call = {error:'Invalid tool JSON'}; } }\n    }\n    if (call) await runToolCall(call);")])
+          p=Path('validation/forge-cleanup-v1.md');p.parent.mkdir(exist_ok=True)
+          p.write_text('# Cleanup v1 scope\n\nCorrects consolidation counts, exposes skipped and failed examples, records consolidation evaluation provenance, distinguishes finished work in audit and receipts, and accepts legacy TOOL syntax through the existing skill sandbox.\n\nDoes NOT integrate Chat memory, redesign the UI, optimize storage, change training weights, or grant new tool permissions. Existing trained status is retained for scheduler compatibility, not correctness. Node tests and syntax checks run before commit; no browser or phone testing is performed by this workflow.\n')
+
+          PY
+      - name: Check syntax
+        run: |
+          node --check docs/app.js
+          node --check docs/learning-worker.js
+      - name: Install test dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install --ignore-scripts; fi
+      - name: Run existing tests
+        run: npm test
+      - name: Run focused regression
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import vm from 'node:vm';
+          import assert from 'node:assert/strict';
+          let code=fs.readFileSync('docs/learning-worker.js','utf8').replace(/^import .*;\s*$/gm,'');
+          const events=[];
+          const c=vm.createContext({console,TextEncoder,TextDecoder,self:{},postMessage(){},setTimeout,clearTimeout,structuredClone,Uint8Array});
+          vm.runInContext(code,c);
+          c.capture=(type,detail)=>events.push({type,detail});
+          vm.runInContext(`
+          record={modelId:'test',jobs:[
+          {id:'a',name:'match',kind:'pair',status:'trained',responseStart:14,tokens:new Uint8Array(17)},
+          {id:'b',name:'skip',kind:'pair',status:'trained',responseStart:2049,tokens:new Uint8Array(2052)},
+          {id:'c',name:'fail',kind:'pair',status:'trained',responseStart:14,tokens:new Uint8Array(17),requeues:3}]};
+          net={steps:42,generate:(()=>{let i=0;return ()=>++i===1?'\0\0':'wrong';})()};
+          rulesState=async()=>({state:null,hash:'test-hash',bytes:0,step:42});
+          save=async()=>{}; schedule=()=>{}; emit=capture;
+          `,c);
+          await vm.runInContext('consolidate()',c);
+          const r=events.find(x=>x.type==='consolidation').detail;
+          assert.equal(r.eligible,3);assert.equal(r.tested,2);assert.equal(r.skipped.length,1);
+          assert.equal(r.failed.length,1);assert.equal(r.reproduced,1);
+          assert.equal(vm.runInContext('record.jobs[2].latestEvaluation.outcome',c),'not-reproduced');
+          console.log('Focused consolidation regression passed (stubbed worker).');
+
+          JS
+      - name: Commit only after tests pass
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/app.js docs/learning-worker.js validation/forge-cleanup-v1.md
+          git diff --cached --check
+          git commit -m 'Fix Forge learning evidence and skill-call compatibility'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+      - name: Report scope
+        run: cat validation/forge-cleanup-v1.md >> "$GITHUB_STEP_SUMMARY"
